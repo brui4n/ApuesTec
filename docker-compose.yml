@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Base de Datos Relacional Principal
+  # 1. Base de Datos Relacional Principal
   postgres:
     image: postgres:15-alpine
     container_name: apuestec_db
@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Base de Datos en Memoria para Caché e Hilo de Posiciones (Leaderboard)
+  # 2. Base de Datos en Memoria para Caché e Hilo de Posiciones (Leaderboard)
   redis:
     image: redis:7-alpine
     container_name: apuestec_redis
@@ -35,6 +35,38 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # 3. API Backend (Go + Gin Gonic)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: apuestec_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - GIN_MODE=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 4. Frontend Web (Next.js App)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: apuestec_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
